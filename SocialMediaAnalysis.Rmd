@@ -1,0 +1,180 @@
+---
+
+author: "Suyash Mohta"
+date: "2024-11-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(ggplot2)
+library(ivreg)
+library(modelsummary)
+
+load("HW3.Rdata")
+```
+
+
+```{r}
+# Correlation matrix
+# Calculate and visualize correlation matrix
+library(reshape2)
+
+# Select variables for analysis
+selected_vars <- c("IGLikes", "IGComments", "Video", "FeatureSelf", 
+                  "Followers", "LengthChar", "Photography", "SelfPct")
+
+# Calculate correlation matrix
+cor_matrix <- cor(IGdata[, selected_vars], use = "complete.obs")
+
+# Melt correlation matrix for visualization
+cor_melted <- melt(cor_matrix)
+
+# Create correlation heatmap
+ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    low = "blue",
+    mid = "white",
+    high = "red",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  geom_text(aes(label = sprintf("%.2f", value)), color = "black", size = 3) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  labs(
+    title = "Correlation Matrix of Instagram Variables",
+    subtitle = "Analysis of Engagement and Content Characteristics",
+    x = "",
+    y = "",
+    fill = "Correlation"
+  )
+```
+
+
+```{r}
+
+head(IGdata)
+
+ggplot(IGdata) +
+  geom_boxplot(aes(x= as.factor(Video),y=Photography, fill=as.factor(Video)))
+
+```
+```{r}
+
+ggplot(IGdata) +
+  geom_boxplot(aes(x= as.factor(FeatureSelf),y=SelfPct, fill=as.factor(FeatureSelf)))
+
+```
+
+
+```{r}
+
+ggplot(IGdata) +
+  geom_boxplot(aes(x=as.factor(FeatureSelf),y=IGLikes,fill=as.factor(Video) ))
+  
+```
+
+```{r}
+ggplot(IGdata) +
+  geom_boxplot(aes(x=as.factor(FeatureSelf),y=IGComments,fill=as.factor(Video) ))
+```
+
+
+
+
+```{r}
+
+ggplot(IGdata , aes(x=IGLikes,y=FeatureSelf) ) + 
+  geom_point() + 
+  geom_smooth(method='lm',se=FALSE)
+
+```
+
+
+```{r}
+
+ggplot(IGdata, aes(x=IGLikes,y=IGComments,color=as.factor(FeatureSelf))) +
+  geom_point() 
+ 
+```
+
+
+## Regression For Likes 
+
+```{r}
+
+m_ols_likes <- lm(  IGLikes ~ Followers + LengthChar + Video + FeatureSelf,
+  data = IGdata)
+
+summary(m_ols_likes)
+```
+
+
+```{r}
+# m_iv_likes <- ivreg(IGLikes ~ Followers + LengthChar +  Video  + FeatureSelf |  Photography + SelfPct + Followers + LengthChar, data = IGdata)
+
+m_iv_likes <- ivreg(IGLikes ~ Followers + LengthChar |  Video  + FeatureSelf |  Photography  + SelfPct , data = IGdata)
+
+summary(m_iv_likes)
+```
+
+```{r}
+
+m_list <- list(OLS = m_ols_likes, IV = m_iv_likes)
+
+msummary(m_list)
+
+
+modelplot(m_list, coef_omit = "Intercept|LengthChar|Followers") + labs(title = "Model for Likes")
+modelplot(m_list, coef_omit = "FeatureSelf|Video|Intercept")  + labs(title = "Model for Likes
+                                                                     ")
+
+```
+
+
+## Regression For Comments
+
+
+```{r}
+
+m_ols_comms <- lm(  IGComments ~ Followers + LengthChar + Video + FeatureSelf,
+  data = IGdata)
+
+summary(m_ols_comms)
+```
+
+
+```{r}
+m_iv_comms <- ivreg(IGComments ~ Followers + LengthChar +  Video  + FeatureSelf |  Photography  + SelfPct + Followers + LengthChar, data = IGdata)
+
+# m_iv_comms <- ivreg(IGComments ~ Followers + LengthChar |  Video  + FeatureSelf |  Photography  + SelfPct , data = IGdata)
+
+summary(m_iv_comms)
+```
+
+
+```{r}
+
+m_list <- list(OLS = m_ols_comms, IV = m_iv_comms)
+
+msummary(m_list)
+
+
+modelplot(m_list, coef_omit = "Intercept|LengthChar|Followers") + labs(title = "Model for Comments")
+modelplot(m_list, coef_omit = "FeatureSelf|Video|Intercept")  + labs(title = "Model for Comments")
+```
+
+
+
+
+
+
